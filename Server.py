@@ -61,8 +61,8 @@ class socketServer(Thread):
     def runArcGis(self):
         pass
 
-pachPHotoscanProject = r'D:\dimaProject\photoscan\processing_photoscan'
-
+#pachPHotoscanProject = r'D:\dimaProject\photoscan\processing_photoscan'
+pachPHotoscanProject = r'D:\dimaProject\Project photoscan ArcGis\data\processing_photoscan'
 
 def getID(pach):
     '''
@@ -88,9 +88,12 @@ def startserver():
 
     test = socketServer(addr)
     test.runServer()
-    dictParameters['ID_User'] = getID(pachPHotoscanProject)
-    # Отправляем команду на запуск с параметрами
-    test.run(dictParameters)
+    while True:
+
+        dictParameters['ID_User'] = getID(pachPHotoscanProject)
+        print('Id для обработки', dictParameters['ID_User'])
+        # Отправляем команду на запуск с параметрами
+        test.run(dictParameters)
 
 if __name__ == "__main__":
     startserver()
