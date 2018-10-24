@@ -2,6 +2,7 @@ import socket
 from threading import Thread
 import json
 import os
+from workWithDataBase import DBManager
 
 class socketServer(Thread):
 
@@ -12,7 +13,6 @@ class socketServer(Thread):
         :param dictParameters: словарь со всеми параметрами принетые из формы
         '''
         self.addr = addr
-
 
     def run(self, dictParameters):
 
@@ -61,8 +61,16 @@ class socketServer(Thread):
     def runArcGis(self):
         pass
 
-#pachPHotoscanProject = r'D:\dimaProject\photoscan\processing_photoscan'
-pachPHotoscanProject = r'D:\dimaProject\Project photoscan ArcGis\data\processing_photoscan'
+def startPhotoscan(pachDB, SettingsPC):
+    dataBase = DBManager(pachDB, SettingsPC)
+    pachProject = dataBase.getSettings()[0][1]
+    listProcessPhotoscan = dataBase.getListForProcessing()
+    for idProcess in listProcessPhotoscan:
+        startProcessProtoscan(pachProject, idProcess)
+    print(pachProject, listProcessPhotoscan)
+
+def startProcessProtoscan(pachProject, id):
+    pass
 
 def getID(pach):
     '''
@@ -78,8 +86,7 @@ def getID(pach):
 
                 return e
 
-
-def startserver():
+def startServer():
     host = 'localhost'
     port = 777
     addr = (host, port)
@@ -96,5 +103,15 @@ def startserver():
         test.run(dictParameters)
 
 if __name__ == "__main__":
-    startserver()
+
+    pachDB = r'C:\projectTree\database.db'
+    SettingsPC = 'PC1'
+    host = 'localhost'
+    port = 777
+    addr = (host, port)
+
+    photoscanOBJ = socketServer(addr)
+    photoscanOBJ.runServer()
+    print("Сервер запущен")
+    startPhotoscan(pachDB, SettingsPC)
 
