@@ -3,74 +3,90 @@ from threading import Thread
 import json
 import os
 from workWithDataBase import DBManager
+import comandPhotoscan
 
-class socketServer(Thread):
+PACH_DB = r'C:\projectTree\database.db'
+SETTING_PC = 'PC1'
 
-    def __init__(self, addr):
-        '''
-        Коструктор
-        :param addr: адресс сервера и порт для прослушки
-        :param dictParameters: словарь со всеми параметрами принетые из формы
-        '''
+class PhotoscanProcessing(Thread):
+
+    def __init__(self, pachDB, settingPC):
         Thread.__init__(self)
-        self.addr = addr
+        self.db = self.OpenDB(pachDB, settingPC)
+        #[('C:\\Users\\admin\\PycharmProjects\\photoscan\\app\\static\\images', 'C:\\projectTree', 12)]
+        self.settings = self.db.getSettings()
 
-    def closeServer(self):
-        self.sock.close()
-
-    def sendMessage(self, conn, message):
-        '''
-        метод отправки сообщения польщлвателю
-        :param conn:
-        :param message:
-        :return:
-        '''
-        message = json.dumps(message)
-        conn.send(bytes(message, encoding='utf-8'))
-
-    def startProcess(self, dictParameters):
-        '''
-        Отправляет команду фотоскану на обработку и пишет этпы которые выполнил
-        :dictParameters: {'':,'':}
-        :return:
-        '''
-        self.dictParameters = dictParameters
-        self.sendMessage(self.connPhotoscan, self.dictParameters)
-        while True:
-            data = self.connPhotoscan.recv(1024)
-            if data == b'vse':
-                break
-            print("data = ", data.decode('utf-8'))
-        print("процесс обработки закончился")
-        return 1
     def run(self):
-        self.runServer()
-        a = input()
-        self.startProcess()
+        #while True:
+            self.listIDProcessing = self.db.getAllIDForProcessing()
+            try:
+                UserIDProcessingPhotoscan = list(self.listIDProcessing[0])[0]
+                print("Начало обработки для ID", UserIDProcessingPhotoscan)
+                self.processingPhotoscan(UserIDProcessingPhotoscan)
+            except IndexError:
+                pass
+                print("Данных для обработки нет")
+            try:
+                UserIDProcessingExport = list(self.listIDProcessing[1])[0]
+                print("Начало экспорта для ID", UserIDProcessingExport)
+                self.processingExport(UserIDProcessingExport)
+            except IndexError:
+                pass
+                print("Данных для экспорта нет")
 
-    def runServer(self):
+    def processingPhotoscan(self, UserID):
         '''
-        Запускает сервер и ждет подключения
+        апуск обработки
         :return:
         '''
-        self.sock = socket.socket()
-        self.sock.bind(self.addr)
-        self.sock.listen(2)
 
-        self.connPhotoscan, addr = self.sock.accept()
-        print('Фотоскан подключился: ', addr)
-        return self.connPhotoscan
+        print("Начало создания проекта", UserID)
+        self.db.pullData('treatment', [(UserID, 'Photoscan', 'CreatProject', False)])
+        self.chunk, self.doc = comandPhotoscan.creatProject(self.settings[0][1] + r'\ID_' + str(UserID) + r'\'', 'project')
+        self.db.editDataTreatment((UserID, 'Photoscan', 'CreatProject', True))
+        print("Окончание создания проекта")
+
+        print("Начало добовления фото")
+        self.db.pullData('treatment', [(UserID, 'Photoscan', 'AddPhoto', False)])
+        comandPhotoscan.AddPhoto(self.chunk, self.settings[0][1] + '\/ID_' + str(UserID) + '\/' + 'photo')
+        self.db.editDataTreatment((UserID, 'Photoscan', 'AddPhoto', True))
+        print("Конец добовления фото")
+
+        print("начало выравнивание фотографий")
+        self.db.pullData('treatment', [(UserID, 'Photoscan', 'alingPhotos', False)])
+        comandPhotoscan.alingPhotos(self.chunk, self.doc)
+        self.db.editDataTreatment((UserID, 'Photoscan', 'alingPhotos', True))
+        print("Конец выравнивание фотографий")
+
+        print("начало выставления системы координат")
+        self.db.pullData('treatment', [(UserID, 'Photoscan', 'CoordinateSystem', False)])
+        comandPhotoscan.setCoordinateSystem(self.chunk, self.doc)
+        self.db.editDataTreatment((UserID, 'Photoscan', 'CoordinateSystem', True))
+        print("Конец выставления системы координат")
+
+
+        try:
+            print("начало построения плотного облака точек")
+            self.db.pullData('treatment', [(UserID, 'Photoscan', 'buildDenseCloud', False)])
+            comandPhotoscan.buildDenseCloud(self.chunk, self.doc)
+            self.db.editDataTreatment((UserID, 'Photoscan', 'buildDenseCloud', True))
+            print("Конец построения плотного облака точек")
+        except RuntimeError:
+            print("шибка мало данных для построения плотного облака")
+
+
+    def processingExport(self, UserID):
+        '''
+        Экспортирует данные в нужные папки
+        :return:
+        '''
+        pass
+
+    def OpenDB(self, pachDB, settingPC):
+        return DBManager(pachDB, settingPC)
 
 if __name__ == "__main__":
-    quryTest = {'ID_User': 1, 'pachProject': r'kkkk'}
-
-    pachDB = r'C:\projectTree\database.db'
-    SettingsPC = 'PC1'
-    host = 'localhost'
-    port = 777
-    addr = (host, port)
-
-    photoscanOBJ = socketServer(addr)
-    photoscanOBJ.start()
-    print("Сервер запущен")
-    startPhotoscan(pachDB, SettingsPC)
+    test = PhotoscanProcessing(PACH_DB, SETTING_PC)
+    print("ЗАпускаем поток")
+    id = test.start()
+    print("ID потока", id)
