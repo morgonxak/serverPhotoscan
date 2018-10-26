@@ -39,6 +39,9 @@ class MainGui(QtWidgets.QDialog):
         print("Стоп")
         self.ThreadProcess.processingStatus = False
 
+    def __del__(self):
+        self.ThreadProcess.processingStatus = False
+
 
 def main():
     doc = PhotoScan.app.document

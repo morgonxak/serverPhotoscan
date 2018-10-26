@@ -1,7 +1,7 @@
 import sqlite3
 
 dictProcessingPhotoscan = {'Server': {1: 'DowloadPhoto', 2: 'CreatDirProject'},
-                         'Photoscan':{1: 'CreatProject', 2: 'AddPhoto', 3: 'alingPhotos', 4: 'CoordinateSystem', 5: 'buildDenseCloud', 6: 'Manual processing'}}
+                         'Photoscan':{1: 'CreatProject', 2: 'AddPhoto', 3: 'alingPhotos', 4: 'CoordinateSystem', 5: 'buildDenseCloud', 6: 'ManualProcessing'}}
 
 class DBManager:
     def __init__(self, pachDB, SettingsPC):
@@ -76,21 +76,22 @@ class DBManager:
             else:
                 return False
         except IndexError:
-            return 'NoData'
+            return False
 
     def getAllIDForProcessing(self):
-        itog = self.getListKey(self.getAllUserID())
-        '''
-        listAllUsetId = []
-        for testList in dictProcessingPhotoscan['Server']:
-            #listAllUsetId.append(self.getListKey(self.getListIDServer(dictProcessingPhotoscan['Server'][testList])))
-            listAllUsetId.append(self.getListIDServer(dictProcessingPhotoscan['Server'][testList]))
-            #print('ортировка по ',dictProcessingPhotoscan['Server'][testList],listAllUsetId)
+        allUserID = self.getListKey(self.getAllUserID())
+        itog = []
+        for UserID in allUserID:
+            try:
+                wallet1 = self.cursor.execute("SELECT STATE FROM treatment WHERE CATEGORY = 'Server' AND PROCESS = ? AND  ID = ?", (self.dictProcessingPhotoscan['Server'][1], UserID))
+                wallet1 = wallet1.fetchall()[0][0]
+                if wallet1 == 1:
+                    wallet2 = self.cursor.execute("SELECT STATE FROM treatment WHERE CATEGORY = 'Server' AND PROCESS = ? AND  ID = ?", (self.dictProcessingPhotoscan['Server'][2], UserID))
+                    wallet2 = wallet2.fetchall()[0][0]
+                    itog.append(UserID)
+            except IndexError:
+                pass
 
-        itog = set
-        for res in listAllUsetId:
-            itog = res.intersection(listAllUsetId[0])
-        '''
         return itog
 
 
@@ -105,5 +106,8 @@ if __name__ == "__main__":
     #print(type(d))
     #print(d)
 
-    c = test.pullData('treatment', [(UserID, 'Photoscan', 'CreatProject', False)])
-    print(c)
+    q = test.getNeedProcessing(2, dictProcessingPhotoscan['Photoscan'][1])
+    print(q)
+
+    #c = test.pullData('treatment', [(UserID, 'Photoscan', 'CreatProject', False)])
+    #   print(c)
