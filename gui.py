@@ -2,6 +2,9 @@ import run
 import PhotoScan
 from PySide2 import QtGui, QtCore, QtWidgets
 
+PACH_DB = r'C:\projectTree\database.db'
+SETTING_PC = 'PC1'
+
 class MainGui(QtWidgets.QDialog):
 
     def __init__(self, parent):
@@ -29,9 +32,12 @@ class MainGui(QtWidgets.QDialog):
 
     def StartProcess(self):
         print('старт')
+        self.ThreadProcess = run.PhotoscanProcessing(PACH_DB, SETTING_PC)
+        self.ThreadProcess.start()
 
     def StopProcess(self):
         print("Стоп")
+        self.ThreadProcess.processingStatus = False
 
 
 def main():
